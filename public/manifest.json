@@ -1,0 +1,22 @@
+{
+  "name": "Parqueadero CUL",
+  "short_name": "Parqueadero",
+  "description": "Consulta de cupos, tarifas, estimación de cobro y mapa del parqueadero en tiempo real.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0e1e38",
+  "theme_color": "#1a2b4c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3005/3005358.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3005/3005358.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parqueadero CUL - Módulo de Operario</title>
+  <!-- CDN de Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0e1e38;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+    .navbar {
+      background-color: #1a2b4c !important;
+      border-bottom: 1px solid #2c3e60;
+    }
+    .panel-card {
+      background-color: #1a2b4c;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      margin-bottom: 30px;
+    }
+    .card-stat {
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+    }
+    .bg-capacidad { background-color: #0d6efd; }
+    .bg-libres { background-color: #52a389; }
+    .bg-ocupados { background-color: #d9534f; }
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    .table-dark-custom {
+      background-color: #162440;
+      color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .table-dark-custom th {
+      background-color: #24375d;
+      color: #aebfdc;
+      border-bottom: 2px solid #34495e;
+    }
+    .table-dark-custom td {
+      border-color: #2c3e60;
+      vertical-align: middle;
+    }
+    .badge-retirado {
+      background-color: #ffc107;
+      color: #000000;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navegación -->
+  <nav class="navbar navbar-expand-lg navbar-dark mb-4 px-4">
+    <a class="navbar-brand fw-bold fs-4" href="#">Parqueadero - Control de Operario</a>
+    <div class="ms-auto">
+      <span class="navbar-text text-light me-3">Operario: <strong id="nombre-usuario">...</strong></span>
+      <a href="#" onclick="cerrarSesion(event)" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
+    </div>
+  </nav>
+
+  <div class="container pb-5">
+
+    <!-- Indicadores en Tiempo Real desde MySQL -->
+    <div class="panel-card">
+      <h4 class="mb-3 text-light"> Disponibilidad del Parqueadero (Conectado a MySQL)</h4>
+      <div class="row g-3 text-center">
+        <div class="col-md-4">
+          <div class="card card-stat bg-capacidad p-3">
+            <h6 class="card-title text-light mb-1">Capacidad Total</h6>
+            <div class="stat-number" id="cnt-capacidad">50</div>
+            <small>Espacios en el establecimiento</small>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card card-stat bg-libres p-3">
+            <h6 class="card-title text-light mb-1">Cupos Libres</h6>
+            <div class="stat-number" id="cnt-libres">0</div>
+            <small>Disponibles para ingreso</small>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card card-stat bg-ocupados p-3">
+            <h6 class="card-title text-light mb-1">Cupos Ocupados</h6>
+            <div class="stat-number" id="cnt-ocupados">0</div>
+            <small>Vehículos actualmente dentro</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario de Registro de Entrada -->
+    <div class="panel-card">
+      <h3 class="mb-4 text-light"> Registrar Ingreso de Vehículo</h3>
+      <form id="form-ingreso" onsubmit="registrarIngreso(event)">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="tipoVehiculo" class="form-label">Tipo de Vehículo</label>
+            <select id="tipoVehiculo" class="form-select bg-dark text-white border-secondary" required>
+              <option value="" disabled selected>Seleccione tipo...</option>
+              <option value="CARRO"> Carro ($3.000 / hr)</option>
+              <option value="MOTO"> Moto ($1.500 / hr)</option>
+              <option value="BICICLETA"> Bicicleta ($500 / hr)</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label for="placaVehiculo" class="form-label">Placa / Identificador</label>
+            <input type="text" id="placaVehiculo" class="form-control bg-dark text-white border-secondary" placeholder="Ej: ABC-123" required>
+          </div>
+
+          <div class="col-md-4">
+            <label for="fechaIngreso" class="form-label">Fecha y Hora de Acceso (Automático BD)</label>
+            <input type="text" id="fechaIngreso" class="form-control bg-dark text-warning border-secondary fw-bold" readonly>
+          </div>
+        </div>
+
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-success px-4 fw-bold">＋ Guardar en Base de Datos</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Lista de Vehículos Activos -->
+    <div class="panel-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-light mb-0"> Vehículos en Parqueadero (Tabla MySQL)</h3>
+        <span class="badge bg-primary fs-6" id="contador-activos">0 Vehículo(s)</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-dark-custom align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Placa</th>
+              <th>Tipo</th>
+              <th>Fecha / Hora Entrada</th>
+              <th>Estado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-activos">
+            <!-- Cargado vía API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lista de Vehículos Retirados -->
+    <div class="panel-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="text-light mb-0"> Registros de Salida (Para revisión / borrado del Admin)</h3>
+        <span class="badge bg-warning text-dark fs-6" id="contador-retirados">0 Retirado(s)</span>
+      </div>
+      <p class="text-muted mb-3"><small> Al marcar la salida, la base de datos calcula el cobro y cambia el estado a FINALIZADO.</small></p>
+
+      <div class="table-responsive">
+        <table class="table table-dark-custom align-middle">
+          <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Tipo</th>
+              <th>Fecha Entrada</th>
+              <th>Fecha Salida</th>
+              <th>Total Cobrado</th>
+              <th>Estado Registro</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-retirados">
+            <!-- Cargado vía API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Si la sesión expira (401), volver al login automáticamente
+    const _fetchOriginal = window.fetch;
+    window.fetch = async (...args) => {
+      const r = await _fetchOriginal(...args);
+      if (r.status === 401) window.location.href = '/login.html';
+      return r;
+    };
+
+    async function cerrarSesion(e) {
+      e.preventDefault();
+      try { await _fetchOriginal('/api/auth/logout', { method: 'POST' }); } catch (_) {}
+      window.location.href = '/login.html';
+    }
+
+    async function cargarUsuario() {
+      try {
+        const r = await fetch('/api/auth/yo');
+        const d = await r.json();
+        if (d.success) document.getElementById('nombre-usuario').textContent = d.usuario.nombre;
+      } catch (_) {}
+    }
+    cargarUsuario();
+
+    // Actualizar reloj visual continuo
+    function actualizarReloj() {
+      const ahora = new Date();
+      document.getElementById('fechaIngreso').value = ahora.toLocaleString('es-CO');
+    }
+    setInterval(actualizarReloj, 1000);
+    actualizarReloj();
+
+    // Cargar datos reales desde la base de datos MySQL
+    async function cargarEstadoBD() {
+      try {
+        const respuesta = await fetch('/api/parqueadero/estado');
+        const datos = await respuesta.json();
+
+        if (!datos.success) return;
+
+        // Actualizar Tarjetas
+        document.getElementById('cnt-capacidad').textContent = datos.capacidadTotal;
+        document.getElementById('cnt-libres').textContent = datos.cuposLibres;
+        document.getElementById('cnt-ocupados').textContent = datos.cuposOcupados;
+        document.getElementById('contador-activos').textContent = `${datos.activos.length} Vehículo(s)`;
+        document.getElementById('contador-retirados').textContent = `${datos.retirados.length} Retirado(s)`;
+
+        // Renderizar Vehículos Activos
+        const tbodyActivos = document.getElementById('tabla-activos');
+        tbodyActivos.innerHTML = '';
+        if (datos.activos.length === 0) {
+          tbodyActivos.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay vehículos parqueados actualmente en la BD.</td></tr>`;
+        } else {
+          datos.activos.forEach((veh, index) => {
+            const fechaEntrada = new Date(veh.hora_entrada).toLocaleString('es-CO');
+            tbodyActivos.innerHTML += `
+              <tr>
+                <td>${index + 1}</td>
+                <td><strong class="text-warning">${veh.placa}</strong></td>
+                <td><span class="badge bg-secondary">${veh.tipo_vehiculo}</span></td>
+                <td>${fechaEntrada}</td>
+                <td><span class="badge bg-success">En Parqueadero</span></td>
+                <td class="text-center">
+                  <button class="btn btn-danger btn-sm" onclick="registrarSalidaBD(${veh.id})">
+                     Registrar Salida / Retirar
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        // Renderizar Vehículos Retirados
+        const tbodyRetirados = document.getElementById('tabla-retirados');
+        tbodyRetirados.innerHTML = '';
+        if (datos.retirados.length === 0) {
+          tbodyRetirados.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay registros de salidas en la BD.</td></tr>`;
+        } else {
+          datos.retirados.forEach(veh => {
+            const fechaEntrada = new Date(veh.hora_entrada).toLocaleString('es-CO');
+            const fechaSalida = veh.hora_salida ? new Date(veh.hora_salida).toLocaleString('es-CO') : '-';
+            const cobro = veh.monto_total ? `$${parseFloat(veh.monto_total).toLocaleString('es-CO')}` : '$0';
+
+            tbodyRetirados.innerHTML += `
+              <tr>
+                <td><strong class="text-light">${veh.placa}</strong></td>
+                <td><span class="badge bg-dark border border-secondary">${veh.tipo_vehiculo}</span></td>
+                <td>${fechaEntrada}</td>
+                <td>${fechaSalida}</td>
+                <td class="text-success fw-bold">${cobro}</td>
+                <td><span class="badge badge-retirado"> Retirado (Pendiente Admin)</span></td>
+              </tr>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error('Error al conectar con la API/BD:', error);
+      }
+    }
+
+    // Guardar nuevo registro en MySQL
+    async function registrarIngreso(e) {
+      e.preventDefault();
+
+      const tipo = document.getElementById('tipoVehiculo').value;
+      const placa = document.getElementById('placaVehiculo').value.trim();
+
+      try {
+        const respuesta = await fetch('/api/parqueadero/ingreso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ placa, tipo_vehiculo: tipo })
+        });
+
+        const resultado = await respuesta.json();
+        if (resultado.success) {
+          document.getElementById('form-ingreso').reset();
+          actualizarReloj();
+          await cargarEstadoBD();
+        } else {
+          alert(`⚠️ ${resultado.mensaje}`);
+        }
+      } catch (error) {
+        alert('Error de conexión con el servidor.');
+      }
+    }
+
+    // Registrar salida y actualizar cobro en MySQL
+    async function registrarSalidaBD(id) {
+      try {
+        const respuesta = await fetch(`/api/parqueadero/salida/${id}`, {
+          method: 'PUT'
+        });
+
+        const resultado = await respuesta.json();
+        if (resultado.success) {
+          await cargarEstadoBD();
+        } else {
+          alert(`⚠️ ${resultado.mensaje}`);
+        }
+      } catch (error) {
+        alert('Error al procesar la salida en el servidor.');
+      }
+    }
+
+    // Cargar datos inmediatamente al abrir la página
+    cargarEstadoBD();
+  </script>
+</body>
+</html>

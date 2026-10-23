@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Parqueadero CUL - App Móvil</title>
+
+  <!-- Meta Tags PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1c2833">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3005/3005358.png">
+
+  <!-- CDN de Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- CSS Leaflet.js para Mapa Interactivo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    body {
+      background-color: #121824;
+      color: #ffffff;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ESTILOS ESCRITORIO (PC) */
+    .main-card-desktop {
+      background-color: hwb(182 17% 25%);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .card-stat {
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+    }
+
+    .bg-capacidad {
+      background-color: #0d6efd;
+    }
+
+    .bg-libres {
+      background-color: #52a389;
+    }
+
+    .bg-ocupados {
+      background-color: #d9534f;
+    }
+
+    .bg-tarifas {
+      background-color: #4b6b94;
+    }
+
+    .stat-number {
+      font-size: 2.8rem;
+      font-weight: 700;
+    }
+
+    /* ESTILOS MÓVIL ESTILO APP */
+    @media (max-width: 767.98px) {
+      .vista-desktop {
+        display: none !important;
+      }
+
+      body {
+        background-color: #2b3a4a;
+      }
+
+      .app-header-map {
+        position: relative;
+        height: 100vh;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      #mapa-leaflet-movil {
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+      }
+
+      .app-top-bar {
+        position: absolute;
+        top: 20px;
+        left: 15px;
+        right: 15px;
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .btn-tres-puntos {
+        background: #ffffff;
+        color: #121824;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        font-size: 20px;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .pill-badge-top {
+        background: rgba(18, 24, 36, 0.85);
+        backdrop-filter: blur(8px);
+        color: #ffffff;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .card-app-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: #ffffff;
+        color: #121824;
+        border-radius: 28px 28px 0 0;
+        padding: 22px 20px 24px 20px;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
+      }
+
+      .card-app-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #121824;
+        margin: 0;
+      }
+
+      .card-app-subtitle {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 14px;
+      }
+
+      .chip-info-box {
+        background: #f4f6f8;
+        border-radius: 16px;
+        padding: 10px 12px;
+        text-align: center;
+      }
+
+      .chip-info-box strong {
+        font-size: 15px;
+        display: block;
+        color: #121824;
+      }
+
+      .chip-info-box small {
+        font-size: 11px;
+        color: #6c757d;
+      }
+
+      .btn-app-action {
+        background-color: #e07a5f;
+        color: #ffffff;
+        border: none;
+        border-radius: 16px;
+        padding: 13px;
+        font-weight: 700;
+        font-size: 14px;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(224, 122, 95, 0.4);
+        transition: transform 0.1s;
+      }
+
+      .btn-app-action:active {
+        transform: scale(0.98);
+      }
+    }
+
+    @media (min-width: 768px) {
+      .vista-movil {
+        display: none !important;
+      }
+    }
+
+    .offcanvas-bottom {
+      border-radius: 24px 24px 0 0 !important;
+      background-color: #1a2b4c;
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ==================== VISTA ESCRITORIO (PC) ==================== -->
+  <div class="container py-5 vista-desktop">
+
+    <header class="text-center mb-5">
+      <h1 class="fw-bold text-light">
+        Parqueadero - Información en Tiempo Real
+      </h1>
+    </header>
+
+    <div class="main-card-desktop">
+
+      <h2 class="text-center mb-4 text-light fw-bold">
+        Disponibilidad actual
+      </h2>
+
+      <div class="row g-4">
+
+        <div class="col-md-3">
+          <div class="card card-stat bg-capacidad h-100 p-3 text-center">
+            <h5 class="card-title text-light">Capacidad Total</h5>
+            <div class="stat-number my-auto" id="capacidad-total-pc">--</div>
+            <p class="card-text mb-0 fs-6">Espacios totales</p>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card card-stat bg-libres h-100 p-3 text-center">
+            <h5 class="card-title text-light">Cupos libres</h5>
+            <div class="stat-number my-auto" id="cupos-libres-pc">--</div>
+            <p class="card-text mb-0 fs-6">Disponibles</p>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card card-stat bg-ocupados h-100 p-3 text-center">
+            <h5 class="card-title text-light">Cupos ocupados</h5>
+            <div class="stat-number my-auto" id="cupos-ocupados-pc">--</div>
+            <p class="card-text mb-0 fs-6">En uso</p>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card card-stat bg-tarifas h-100 p-3">
+            <h5 class="card-title text-center text-light mb-3">Tarifas por hora</h5>
+
+            <div class="my-auto text-start ps-2" id="lista-tarifas-pc">
+              <p class="mb-0 fs-6">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="text-center mt-4">
+        <p class="text-muted mb-0 fs-6">
+          Última actualización:
+          <span id="hora-actualizacion-pc">--:--:--</span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ==================== VISTA MÓVIL ESTILO APP ==================== -->
+  <div class="vista-movil">
+
+    <div class="app-header-map">
+
+      <!-- Barra Flotante Superior -->
+      <div class="app-top-bar">
+
+        <button class="btn-tres-puntos"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#menuMovilOffcanvas"
+                aria-label="Menú de funciones">
+          ⋮
+        </button>
+
+        <div class="pill-badge-top" id="top-status-badge">
+          📍
+          <span id="top-nombre-parqueadero">Parqueadero CUL Main</span>
+          •
+          <span id="top-libres-txt" class="text-warning">-- Libres</span>
+        </div>
+
+      </div>
+
+      <!-- Mapa Interactivo Leaflet -->
+      <div id="mapa-leaflet-movil"></div>
+
+      <!-- Tarjeta Flotante Inferior -->
+      <div class="card-app-bottom shadow-lg">
+
+        <div class="d-flex justify-content-between align-items-center mb-1">
+
+          <div>
+            <h3 class="card-app-title" id="card-nombre-parqueadero">
+              Parqueadero CUL Main
+            </h3>
+
+            <div class="card-app-subtitle" id="card-direccion-parqueadero">
+              Calle 58 # 55-24, Barranquilla
+            </div>
+          </div>
+
+          <span id="badge-disponibilidad-movil"
+                class="badge bg-success px-3 py-2 rounded-pill fs-7">
+            Disponible
+          </span>
+
+        </div>
+
+        <!-- Chips de Información de Cupos y Tarifas Dinámicos -->
+        <div class="row g-2 mb-3">
+
+          <div class="col-6">
+            <div class="chip-info-box">
+              <small>Disponibilidad</small>
+              <strong id="card-libres-movil">-- / --</strong>
+            </div>
+          </div>
+
+          <div class="col-6">
+            <div class="chip-info-box">
+              <small>Tarifa Moto / Carro</small>
+              <strong id="card-tarifa-movil">$1.500 / $3.000</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Botón de Navegación GPS -->
+        <a id="btn-navegar-gps"
+           href="https://maps.google.com/?q=10.9878,-74.7889"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="btn btn-app-action text-decoration-none d-block text-center">
+
+          📍 Navegar a este Parqueadero
+        </a>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ==================== PANEL FLOTANTE DESPLEGABLE ==================== -->
+  <div class="offcanvas offcanvas-bottom h-75"
+       tabindex="-1"
+       id="menuMovilOffcanvas"
+       aria-labelledby="menuMovilLabel">
+
+    <div class="offcanvas-header border-bottom border-secondary">
+
+      <h5 class="offcanvas-title text-warning fw-bold" id="menuMovilLabel">
+        ⚡ Opciones de
+        <span id="offcanvas-nombre-p">Parqueadero CUL Main</span>
+      </h5>
+
+      <button type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="offcanvas"
+              aria-label="Cerrar">
+      </button>
+
+    </div>
+
+    <div class="offcanvas-body p-4">
+
+      <div class="accordion accordion-flush" id="accordionFunciones">
+
+        <!-- 1. Disponibilidad Completa -->
+        <div class="accordion-item bg-transparent text-light border-secondary">
+
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-warning fw-bold"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapseDisponibilidad">
+
+              📊 Disponibilidad Actual y Tarifas
+            </button>
+          </h2>
+
+          <div id="collapseDisponibilidad"
+               class="accordion-collapse collapse show"
+               data-bs-parent="#accordionFunciones">
+
+            <div class="accordion-body bg-dark text-light rounded-bottom">
+
+              <div class="row text-center g-2 mb-3">
+
+                <div class="col-4">
+                  <div class="p-2 rounded bg-primary text-white">
+                    <small class="d-block">Total</small>
+                    <strong id="capacidad-total-m">--</strong>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <div class="p-2 rounded bg-success text-white">
+                    <small class="d-block">Libres</small>
+                    <strong id="cupos-libres-m">--</strong>
+                  </div>
+                </div>
+
+                <div class="col-4">
+                  <div class="p-2 rounded bg-danger text-white">
+                    <small class="d-block">Ocupados</small>
+                    <strong id="cupos-ocupados-m">--</strong>
+                  </div>
+                </div>
+
+              </div>
+
+              <div id="lista-tarifas-m" class="small mb-2">
+                Cargando tarifas...
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
+        <!-- 2. Calculadora de Cobro -->
+        <div class="accordion-item bg-transparent text-light border-secondary">
+
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-warning fw-bold"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapseCalculadora">
+
+              🧮 Calculadora de Cobro
+            </button>
+          </h2>
+
+          <div id="collapseCalculadora"
+               class="accordion-collapse collapse"
+               data-bs-parent="#accordionFunciones">
+
+            <div class="accordion-body bg-dark text-light rounded-bottom">
+
+              <div class="mb-2">
+                <label class="form-label small">Tipo de Vehículo</label>
+
+                <select id="calc-tipo"
+                        class="form-select bg-secondary text-white border-0"
+                        onchange="calcularEstimado()">
+
+                  <option value="3000">Carro ($3.000/h)</option>
+                  <option value="1500" selected>Moto ($1.500/h)</option>
+                  <option value="500">Bicicleta ($500/h)</option>
+
+                </select>
+              </div>
+
+              <div class="row g-2 mb-3">
+
+                <div class="col-6">
+                  <label class="form-label small">Horas</label>
+
+                  <input type="number"
+                         id="calc-horas"
+                         class="form-control bg-secondary text-white border-0"
+                         value="3"
+                         min="0"
+                         oninput="calcularEstimado()">
+                </div>
+
+                <div class="col-6">
+                  <label class="form-label small">Minutos</label>
+
+                  <input type="number"
+                         id="calc-minutos"
+                         class="form-control bg-secondary text-white border-0"
+                         value="20"
+                         min="0"
+                         max="59"
+                         oninput="calcularEstimado()">
+                </div>
+
+              </div>
+
+              <div class="p-2 text-center bg-black rounded text-warning fw-bold"
+                   id="calc-resultado">
+
+                Total Estimado: $6.000 COP
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
+        <!-- 3. Mejor Hora para Venir -->
+        <div class="accordion-item bg-transparent text-light border-secondary">
+
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-warning fw-bold"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapsePrediccion">
+
+              💡 Mejor Hora para Venir (Recomendación al Usuario)
+            </button>
+          </h2>
+
+          <div id="collapsePrediccion"
+               class="accordion-collapse collapse"
+               data-bs-parent="#accordionFunciones">
+
+            <div class="accordion-body bg-dark text-light rounded-bottom small"
+                 id="texto-mejor-hora-m"
+                 aria-live="polite">
+
+              Esperando la recomendación del administrador...
+            </div>
+
+          </div>
+        </div>
+
+
+        <!-- 4. Consultar Mi Estancia -->
+        <div class="accordion-item bg-transparent text-light border-secondary">
+
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-warning fw-bold"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapseEstancia">
+
+              🎟️ Consultar mi Estancia (Placa / Tiquete)
+            </button>
+          </h2>
+
+          <div id="collapseEstancia"
+               class="accordion-collapse collapse"
+               data-bs-parent="#accordionFunciones">
+
+            <div class="accordion-body bg-dark text-light rounded-bottom">
+
+              <div class="input-group mb-2">
+
+                <input type="text"
+                       id="input-estancia"
+                       class="form-control bg-secondary text-white border-0"
+                       placeholder="Ej: ABC123">
+
+                <button class="btn btn-warning fw-bold"
+                        onclick="consultarEstancia()">
+
+                  Buscar
+                </button>
+
+              </div>
+
+              <div id="resultado-estancia"
+                   class="d-none p-2 rounded bg-black small">
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <button id="btnInstallPwa"
+              class="btn btn-outline-success w-100 fw-bold mt-3"
+              style="display:none;"
+              onclick="instalarPWA()">
+
+        📲 Instalar App en Inicio
+      </button>
+
+    </div>
+  </div>
+
+
+  <!-- LIBRERÍAS JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+  <!-- CÓDIGO JS PRINCIPAL -->
+  <script>
+    const INTERVALO_MS = 2500;
+
+    let mapaLeaflet;
+
+    let parqueaderosCercanos = [];
+    let parqueaderoSeleccionado = null;
+
+    // Evitar que se inicien varias consultas predictivas simultáneas.
+    let consultaPrediccionEnCurso = false;
+
+    const iconoUsuario = L.divIcon({
+      className: 'user-pin',
+
+      html: '<div style="background-color:#0d6efd; width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 12px rgba(13,110,253,0.9);"></div>',
+
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+
+    function inicializarMapaConUbicacion() {
+      const latBase = 10.9878;
+      const lngBase = -74.7889;
+
+      mapaLeaflet = L.map('mapa-leaflet-movil', {
+        center: [latBase, lngBase],
+        zoom: 16,
+        zoomControl: false
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(mapaLeaflet);
+
+      if (navigator.geolocation) {
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const uLat = pos.coords.latitude;
+            const uLng = pos.coords.longitude;
+
+            L.marker([uLat, uLng], {
+              icon: iconoUsuario
+            })
+              .addTo(mapaLeaflet)
+              .bindPopup('<b>Tu Ubicación Actual</b>');
+
+            generar15ParqueaderosAlrededor(uLat, uLng);
+          },
+
+          () => {
+            generar15ParqueaderosAlrededor(latBase, lngBase);
+          }
+        );
+
+      } else {
+        generar15ParqueaderosAlrededor(latBase, lngBase);
+      }
+    }
+
+
+    function generar15ParqueaderosAlrededor(lat, lng) {
+      parqueaderosCercanos = [
+
+        {
+          id: 'p1',
+          nombre: 'Parqueadero CUL Main',
+          direccion: 'Calle 58 # 55-24',
+          lat: lat,
+          lng: lng,
+          tarifaMoto: 1500,
+          tarifaCarro: 3000,
+          esOficialBD: true
+        },
+
+        {
+          id: 'p2',
+          nombre: 'Parqueadero Centro Plaza',
+          direccion: 'Carrera 54 # 58-10',
+          lat: lat + 0.0021,
+          lng: lng - 0.0018,
+          total: 30,
+          libres: 14,
+          tarifaMoto: 2000,
+          tarifaCarro: 4000
+        },
+
+        {
+          id: 'p3',
+          nombre: 'Parqueadero Norte Express',
+          direccion: 'Calle 60 # 54-40',
+          lat: lat - 0.0018,
+          lng: lng + 0.0022,
+          total: 25,
+          libres: 5,
+          tarifaMoto: 1800,
+          tarifaCarro: 3500
+        },
+
+        {
+          id: 'p4',
+          nombre: 'Parqueadero Estudiante CUL',
+          direccion: 'Calle 57 # 55-12',
+          lat: lat + 0.0012,
+          lng: lng + 0.0019,
+          total: 40,
+          libres: 22,
+          tarifaMoto: 1200,
+          tarifaCarro: 2500
+        },
+
+        {
+          id: 'p5',
+          nombre: 'Parqueadero Portal 54',
+          direccion: 'Carrera 54 # 59-05',
+          lat: lat - 0.0025,
+          lng: lng - 0.0012,
+          total: 20,
+          libres: 8,
+          tarifaMoto: 1500,
+          tarifaCarro: 3000
+        },
+
+        {
+          id: 'p6',
+          nombre: 'Parqueadero San José',
+          direccion: 'Calle 56 # 54-30',
+          lat: lat + 0.0031,
+          lng: lng + 0.0008,
+          total: 35,
+          libres: 18,
+          tarifaMoto: 1600,
+          tarifaCarro: 3200
+        },
+
+        {
+          id: 'p7',
+          nombre: 'Parqueadero Unicentro Prado',
+          direccion: 'Carrera 53 # 58-88',
+          lat: lat - 0.0011,
+          lng: lng - 0.0028,
+          total: 50,
+          libres: 31,
+          tarifaMoto: 2500,
+          tarifaCarro: 5000
+        },
+
+        {
+          id: 'p8',
+          nombre: 'Parqueadero Calle 58 Real',
+          direccion: 'Calle 58 # 53-15',
+          lat: lat + 0.0005,
+          lng: lng - 0.0031,
+          total: 18,
+          libres: 2,
+          tarifaMoto: 1500,
+          tarifaCarro: 3000
+        },
+
+        {
+          id: 'p9',
+          nombre: 'Parqueadero La Catedral',
+          direccion: 'Carrera 55 # 56-40',
+          lat: lat - 0.0032,
+          lng: lng + 0.0015,
+          total: 28,
+          libres: 11,
+          tarifaMoto: 1800,
+          tarifaCarro: 3800
+        },
+
+        {
+          id: 'p10',
+          nombre: 'Parqueadero MetroCentro 55',
+          direccion: 'Calle 59 # 55-02',
+          lat: lat + 0.0028,
+          lng: lng + 0.0027,
+          total: 22,
+          libres: 9,
+          tarifaMoto: 1500,
+          tarifaCarro: 3000
+        },
+
+        {
+          id: 'p11',
+          nombre: 'Parqueadero Villa Country Hub',
+          direccion: 'Carrera 56 # 59-33',
+          lat: lat + 0.0019,
+          lng: lng - 0.0025,
+          total: 45,
+          libres: 20,
+          tarifaMoto: 2200,
+          tarifaCarro: 4500
+        },
+
+        {
+          id: 'p12',
+          nombre: 'Estacionamiento El Prado',
+          direccion: 'Calle 55 # 54-18',
+          lat: lat - 0.0020,
+          lng: lng - 0.0005,
+          total: 15,
+          libres: 1,
+          tarifaMoto: 1400,
+          tarifaCarro: 2800
+        },
+
+        {
+          id: 'p13',
+          nombre: 'Parqueadero Central 58',
+          direccion: 'Calle 58 # 56-10',
+          lat: lat + 0.0009,
+          lng: lng + 0.0033,
+          total: 32,
+          libres: 16,
+          tarifaMoto: 1500,
+          tarifaCarro: 3000
+        },
+
+        {
+          id: 'p14',
+          nombre: 'Parqueadero Bellas Artes',
+          direccion: 'Carrera 54 # 57-50',
+          lat: lat - 0.0008,
+          lng: lng + 0.0011,
+          total: 26,
+          libres: 13,
+          tarifaMoto: 1700,
+          tarifaCarro: 3400
+        },
+
+        {
+          id: 'p15',
+          nombre: 'Parqueadero Carrizal Express',
+          direccion: 'Calle 61 # 55-80',
+          lat: lat + 0.0035,
+          lng: lng - 0.0009,
+          total: 30,
+          libres: 25,
+          tarifaMoto: 1300,
+          tarifaCarro: 2700
+        }
+
+      ];
+
+      parqueaderoSeleccionado = parqueaderosCercanos[0];
+
+      parqueaderosCercanos.forEach((p) => {
+        const marcador = L.marker([p.lat, p.lng]).addTo(mapaLeaflet);
+
+        marcador.bindPopup(`<b>${p.nombre}</b><br>${p.direccion}`);
+
+        marcador.on('click', () => seleccionarParqueadero(p));
+      });
+
+      mapaLeaflet.setView([lat, lng], 16);
+
+      actualizarVistaParqueaderoUI();
+    }
+
+
+    function seleccionarParqueadero(p) {
+      parqueaderoSeleccionado = p;
+      actualizarVistaParqueaderoUI();
+    }
+
+
+    function actualizarVistaParqueaderoUI() {
+      const p = parqueaderoSeleccionado;
+
+      if (!p) return;
+
+      document.getElementById('card-nombre-parqueadero').textContent =
+        p.nombre;
+
+      document.getElementById('card-direccion-parqueadero').textContent =
+        p.direccion;
+
+      document.getElementById('top-nombre-parqueadero').textContent =
+        p.nombre;
+
+      document.getElementById('offcanvas-nombre-p').textContent =
+        p.nombre;
+
+      document.getElementById('btn-navegar-gps').href =
+        `https://maps.google.com/?q=${p.lat},${p.lng}`;
+
+      if (!p.esOficialBD) {
+
+        document.getElementById('top-libres-txt').textContent =
+          `${p.libres} Libres`;
+
+        document.getElementById('card-libres-movil').textContent =
+          `${p.libres} / ${p.total}`;
+
+        document.getElementById('card-tarifa-movil').textContent =
+          `$${p.tarifaMoto.toLocaleString('es-CO')} / $${p.tarifaCarro.toLocaleString('es-CO')}`;
+
+        document.getElementById('capacidad-total-m').textContent =
+          p.total;
+
+        document.getElementById('cupos-libres-m').textContent =
+          p.libres;
+
+        document.getElementById('cupos-ocupados-m').textContent =
+          p.total - p.libres;
+
+        document.getElementById('lista-tarifas-m').innerHTML = `
+          <div>
+            <strong>MOTO:</strong>
+            $${p.tarifaMoto.toLocaleString('es-CO')}/h
+          </div>
+
+          <div>
+            <strong>CARRO:</strong>
+            $${p.tarifaCarro.toLocaleString('es-CO')}/h
+          </div>
+        `;
+
+        const badge = document.getElementById('badge-disponibilidad-movil');
+
+        if (p.libres > 5) {
+          badge.textContent = 'Disponible';
+          badge.className =
+            'badge bg-success px-3 py-2 rounded-pill fs-7';
+
+        } else if (p.libres > 0) {
+          badge.textContent = 'Casi Lleno';
+          badge.className =
+            'badge bg-warning text-dark px-3 py-2 rounded-pill fs-7';
+
+        } else {
+          badge.textContent = 'Lleno';
+          badge.className =
+            'badge bg-danger px-3 py-2 rounded-pill fs-7';
+        }
+
+        const selectCalc = document.getElementById('calc-tipo');
+
+        if (selectCalc) {
+          selectCalc.innerHTML = `
+            <option value="${p.tarifaCarro}">
+              Carro ($${p.tarifaCarro.toLocaleString('es-CO')}/h)
+            </option>
+
+            <option value="${p.tarifaMoto}" selected>
+              Moto ($${p.tarifaMoto.toLocaleString('es-CO')}/h)
+            </option>
+          `;
+
+          calcularEstimado();
+        }
+
+      } else {
+        cargarDisponibilidad();
+      }
+    }
+
+
+    async function cargarDisponibilidad() {
+      try {
+        const respuesta = await fetch('/api/parqueadero/disponibilidad', {
+          cache: 'no-store'
+        });
+
+        const datos = await respuesta.json();
+
+        if (!datos.success) return;
+
+        if (document.getElementById('capacidad-total-pc')) {
+
+          document.getElementById('capacidad-total-pc').textContent =
+            datos.capacidadTotal;
+
+          document.getElementById('cupos-libres-pc').textContent =
+            datos.cuposLibres;
+
+          document.getElementById('cupos-ocupados-pc').textContent =
+            datos.cuposOcupados;
+
+          document.getElementById('lista-tarifas-pc').innerHTML =
+            datos.tarifas
+              .map(t => `
+                <p class="mb-1 fs-6">
+                  <strong>${t.tipo_vehiculo}:</strong>
+                  $${Number(t.tarifa_por_hora).toLocaleString('es-CO')}/h
+                </p>
+              `)
+              .join('');
+
+          document.getElementById('hora-actualizacion-pc').textContent =
+            new Date().toLocaleTimeString('es-CO');
+        }
+
+        if (
+          parqueaderoSeleccionado &&
+          parqueaderoSeleccionado.esOficialBD
+        ) {
+          document.getElementById('capacidad-total-m').textContent =
+            datos.capacidadTotal;
+
+          document.getElementById('cupos-libres-m').textContent =
+            datos.cuposLibres;
+
+          document.getElementById('cupos-ocupados-m').textContent =
+            datos.cuposOcupados;
+
+          document.getElementById('top-libres-txt').textContent =
+            `${datos.cuposLibres} Libres`;
+
+          document.getElementById('card-libres-movil').textContent =
+            `${datos.cuposLibres} / ${datos.capacidadTotal}`;
+
+          const badgeMovil =
+            document.getElementById('badge-disponibilidad-movil');
+
+          if (datos.cuposLibres > 5) {
+            badgeMovil.textContent = 'Disponible';
+            badgeMovil.className =
+              'badge bg-success px-3 py-2 rounded-pill fs-7';
+
+          } else if (datos.cuposLibres > 0) {
+            badgeMovil.textContent = 'Casi Lleno';
+            badgeMovil.className =
+              'badge bg-warning text-dark px-3 py-2 rounded-pill fs-7';
+
+          } else {
+            badgeMovil.textContent = 'Lleno';
+            badgeMovil.className =
+              'badge bg-danger px-3 py-2 rounded-pill fs-7';
+          }
+
+          document.getElementById('lista-tarifas-m').innerHTML =
+            datos.tarifas
+              .map(t => `
+                <div>
+                  <strong>${t.tipo_vehiculo}:</strong>
+                  $${Number(t.tarifa_por_hora).toLocaleString('es-CO')}/h
+                </div>
+              `)
+              .join('');
+        }
+
+      } catch (error) {
+        console.error('Error al cargar disponibilidad:', error);
+      }
+
+      // La predicción se actualiza por separado.
+    }
+
+
+    // Consultar la predicción activa publicada por el administrador.
+    async function cargarPrediccionSimuladaAdmin() {
+      const boxPred = document.getElementById('texto-mejor-hora-m');
+
+      if (!boxPred || consultaPrediccionEnCurso) return;
+
+      consultaPrediccionEnCurso = true;
+
+      try {
+        const respuesta = await fetch('/api/predictivo/resumen', {
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const textoRespuesta = await respuesta.text();
+
+        let datos;
+
+        try {
+          datos = JSON.parse(textoRespuesta);
+        } catch (errorJSON) {
+          throw new Error(
+            `El servidor devolvió una respuesta no válida. HTTP ${respuesta.status}.`
+          );
+        }
+
+        if (!respuesta.ok || !datos.success) {
+          throw new Error(
+            datos.mensaje || 'No se pudo consultar la predicción.'
+          );
+        }
+
+        // Todavía no se ha pulsado el botón en el administrador.
+        if (datos.configurada === false) {
+          boxPred.textContent =
+            datos.mensaje ||
+            'El administrador todavía no ha publicado una recomendación.';
+
+          return;
+        }
+
+        let badgeClass = 'bg-success';
+
+        if (
+          datos.clave === '16' ||
+          datos.nivelDemanda.includes('95%') ||
+          datos.nivelDemanda.includes('Máxima')
+        ) {
+          badgeClass = 'bg-danger';
+
+        } else if (
+          datos.clave === '11' ||
+          datos.nivelDemanda.includes('85%') ||
+          datos.nivelDemanda.includes('Alta')
+        ) {
+          badgeClass = 'bg-warning text-dark';
+
+        } else if (
+          datos.clave === '08' ||
+          datos.nivelDemanda.includes('50%') ||
+          datos.nivelDemanda.includes('Moderada')
+        ) {
+          badgeClass = 'bg-info text-dark';
+        }
+
+        boxPred.innerHTML = `
+          <div class="mb-2">
+            <strong class="text-warning">🕒 Franja Simulada:</strong>
+            ${datos.horaSimulada}
+          </div>
+
+          <div class="mb-2">
+            <strong>📊 Nivel de Ocupación:</strong>
+
+            <span class="badge ${badgeClass} fs-7">
+              ${datos.nivelDemanda}
+            </span>
+          </div>
+
+          <div class="p-2 rounded bg-black bg-opacity-40 border border-secondary">
+            ${datos.recomendacion}
+          </div>
+        `;
+
+      } catch (error) {
+
+        console.error(
+          'Error al consultar la API predictiva:',
+          error
+        );
+
+        // No presentar una recomendación predeterminada como si
+        // hubiese sido recibida correctamente desde el servidor.
+        boxPred.textContent =
+          'No se pudo actualizar la recomendación. Verifica la conexión con el servidor.';
+
+      } finally {
+        consultaPrediccionEnCurso = false;
+      }
+    }
+
+
+    function calcularEstimado() {
+      const elTipo = document.getElementById('calc-tipo');
+
+      if (!elTipo) return;
+
+      const tarifa = parseFloat(elTipo.value);
+
+      const horas =
+        parseInt(document.getElementById('calc-horas').value) || 0;
+
+      const minutos =
+        parseInt(document.getElementById('calc-minutos').value) || 0;
+
+      const minutosTotales = (horas * 60) + minutos;
+
+      const horasACobrar = Math.max(
+        1,
+        Math.ceil(minutosTotales / 60)
+      );
+
+      const total = horasACobrar * tarifa;
+
+      document.getElementById('calc-resultado').textContent =
+        `Total Estimado: $${total.toLocaleString('es-CO')} COP`;
+    }
+
+
+    async function consultarEstancia() {
+      const criterio =
+        document.getElementById('input-estancia').value.trim();
+
+      const resBox =
+        document.getElementById('resultado-estancia');
+
+      if (!criterio) {
+        alert('Ingresa una placa o número de tiquete');
+        return;
+      }
+
+      try {
+        const respuesta = await fetch(
+          `/api/parqueadero/estancia/${encodeURIComponent(criterio)}`
+        );
+
+        const datos = await respuesta.json();
+
+        resBox.classList.remove('d-none');
+
+        if (datos.success) {
+          const e = datos.estancia;
+
+          resBox.innerHTML = `
+            <div class="text-warning fw-bold">
+              Tiquete #${e.tiqueteId} (${e.placa})
+            </div>
+
+            <div>Tipo: ${e.tipoVehiculo}</div>
+
+            <div>Ingreso: ${e.horaIngreso}</div>
+
+            <div>Tiempo: ${e.tiempoTranscurrido}</div>
+
+            <div class="text-success fw-bold mt-1">
+              Acumulado: $${e.montoEstimado.toLocaleString('es-CO')} COP
+            </div>
+          `;
+
+        } else {
+          resBox.innerHTML = `
+            <span class="text-danger">${datos.mensaje}</span>
+          `;
+        }
+
+      } catch (error) {
+        resBox.classList.remove('d-none');
+
+        resBox.innerHTML = `
+          <span class="text-danger">Error al consultar datos</span>
+        `;
+      }
+    }
+
+
+    // Registro del Service Worker para la PWA.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .catch(() => {});
+    }
+
+
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+
+      deferredPrompt = e;
+
+      const btn = document.getElementById('btnInstallPwa');
+
+      if (btn) {
+        btn.style.display = 'block';
+      }
+    });
+
+
+    function instalarPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+        });
+      }
+    }
+
+
+    window.onload = () => {
+      if (window.innerWidth < 768) {
+        inicializarMapaConUbicacion();
+      }
+
+      // Disponibilidad: actualización independiente.
+      cargarDisponibilidad();
+
+      setInterval(
+        cargarDisponibilidad,
+        INTERVALO_MS
+      );
+
+      // Predicción: consulta independiente cada 2,5 segundos.
+      cargarPrediccionSimuladaAdmin();
+
+      setInterval(
+        cargarPrediccionSimuladaAdmin,
+        INTERVALO_MS
+      );
+
+      calcularEstimado();
+    };
+  </script>
+
+</body>
+</html>
