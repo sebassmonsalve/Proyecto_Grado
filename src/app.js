@@ -17,11 +17,19 @@ const {
 
 const app = express();
 
+// Obligatorio para que Express reconozca el HTTPS detrás del proxy de Render.
+app.set('trust proxy', 1);
+
 // Middlewares globales.
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Ruta pública ligera para mantener despierto el servidor en Render.
+app.get('/ping', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // Página de inicio principal.
 app.get('/', (req, res) => {
@@ -43,7 +51,6 @@ app.use(
 
 // Endpoints de la API.
 // Se registran antes de servir los archivos estáticos.
-
 app.use('/api/auth', authRoutes);
 
 // Registro de diagnóstico para comprobar si la solicitud

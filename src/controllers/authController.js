@@ -3,6 +3,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_parqueadero_cul_2026';
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 8 * 60 * 60 * 1000
+};
+
 // POST /api/auth/login
 async function login(req, res) {
   try {
@@ -30,12 +39,12 @@ async function login(req, res) {
 
     const token = jwt.sign(
       { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
     res
-      .cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 60 * 60 * 1000 })
+      .cookie('token', token, cookieOptions)
       .status(200)
       .json({
         mensaje: 'Inicio de sesión exitoso.',
@@ -50,7 +59,11 @@ async function login(req, res) {
 
 // POST /api/auth/logout
 function logout(req, res) {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  });
   res.status(200).json({ mensaje: 'Sesión cerrada.' });
 }
 
@@ -64,7 +77,7 @@ function verificarToken(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
     req.usuario = payload;
     next();
   } catch (error) {
@@ -88,14 +101,18 @@ function protegerPagina(...rolesPermitidos) {
     const token = req.cookies?.token;
     if (!token) return res.redirect('/login.html');
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const payload = jwt.verify(token, JWT_SECRET);
       if (!rolesPermitidos.includes(payload.rol)) {
         return res.redirect(payload.rol === 'OPERARIO' ? '/operario.html' : '/login.html');
       }
       req.usuario = payload;
       next();
     } catch (error) {
-      res.clearCookie('token');
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
       return res.redirect('/login.html');
     }
   };
