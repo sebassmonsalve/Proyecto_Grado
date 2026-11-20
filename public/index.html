@@ -615,11 +615,10 @@
         zoomControl: false
       });
 
-      // Capa compatible con WebView/APK sin bloqueo 403
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
+      // Capa Esri World Street Map compatible con WebView/APK sin API Key
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap © CARTO'
+        attribution: '© Esri'
       }).addTo(mapaLeaflet);
 
       // Cargar los parqueaderos de inmediato sin esperar al GPS
